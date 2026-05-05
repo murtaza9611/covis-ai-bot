@@ -132,7 +132,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="canvas-chat-pattern relative flex h-screen min-h-0 flex-col overflow-hidden">
+    <div className="canvas-chat-pattern relative flex h-[100dvh] min-h-[100svh] flex-col overflow-hidden">
       <a
         href="#chat-main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2.5 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-md"
