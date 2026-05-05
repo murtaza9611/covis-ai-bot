@@ -65,7 +65,7 @@ export function ChatInput({
         if (busy || !value?.trim()) return
         onSubmit(e)
       }}
-      className="shrink-0 bg-canvas px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-8"
+      className="shrink-0 bg-canvas px-4 py-2 md:px-8 md:py-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-[max(1rem,env(safe-area-inset-bottom))]"
     >
       <div className="relative mx-auto w-full max-w-3xl">
         <div className="rounded-2xl border border-border bg-card p-1.5 shadow-sm ring-1 ring-black/[0.03] motion-safe:transition-[box-shadow,border-color] motion-safe:duration-200 motion-safe:focus-within:border-primary/25 motion-safe:focus-within:shadow-md motion-safe:focus-within:ring-primary/10 dark:ring-white/[0.06]">
@@ -123,7 +123,7 @@ export function ChatInput({
             </Button>
           </div>
         </div>
-        <div className="mt-2 flex flex-col items-center gap-1 sm:flex-row sm:justify-center sm:gap-3">
+        <div className="mt-2 hidden flex-col items-center gap-1 sm:flex sm:flex-row sm:justify-center sm:gap-3">
           <p className="flex items-center gap-1.5 text-center text-[11px] text-primary/75 dark:text-muted-foreground">
             <Keyboard
               className="hidden h-3.5 w-3.5 shrink-0 text-primary/65 dark:text-muted-foreground sm:inline"

@@ -155,7 +155,7 @@ export default function ChatPage() {
           >
             {/* <ChatPageHeader /> */}
 
-            <div className="flex min-h-0 flex-1 flex-col px-4 pb-3 pt-8 md:px-8 md:pb-4">
+            <div className="flex min-h-0 flex-1 flex-col px-4 pb-2 pt-4 md:px-8 md:pb-4 md:pt-8">
               <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
                 <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-chat-card ring-1 ring-zinc-900/5 motion-safe:transition-shadow motion-safe:duration-300 motion-safe:hover:shadow-lg motion-safe:hover:ring-primary/10 dark:ring-white/[0.06]">
                   <div
