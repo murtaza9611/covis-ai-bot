@@ -20,13 +20,13 @@ export function ChatInput({
   disabled,
   isSending = false,
 }: ChatInputProps) {
+  const formRef = useRef<HTMLFormElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const prevSendingRef = useRef(false)
   const minHeight = 52
   const maxHeight = 160
 
   const hardDisabled = !!disabled
-  const sendingLocked = isSending && !hardDisabled
 
   const resizeTextarea = () => {
     const el = textareaRef.current
@@ -42,24 +42,28 @@ export function ChatInput({
   }, [value])
 
   useEffect(() => {
-    if (!isSending) return
-    const id = requestAnimationFrame(() => {
-      textareaRef.current?.focus({ preventScroll: true })
-    })
-    return () => cancelAnimationFrame(id)
-  }, [isSending])
-
-  useEffect(() => {
+    let raf = 0
     if (prevSendingRef.current && !isSending) {
-      textareaRef.current?.focus({ preventScroll: true })
+      const el = textareaRef.current
+      if (el) {
+        raf = requestAnimationFrame(() => {
+          const coarse =
+            typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+          el.focus(coarse ? undefined : { preventScroll: true })
+        })
+      }
     }
     prevSendingRef.current = isSending
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+    }
   }, [isSending])
 
   const busy = hardDisabled || isSending
 
   return (
     <form
+      ref={formRef}
       onSubmit={(e) => {
         e.preventDefault()
         if (busy || !value?.trim()) return
@@ -80,6 +84,7 @@ export function ChatInput({
               placeholder="Describe the issue you want to report..."
               value={value}
               onChange={(e) => {
+                if (isSending && !hardDisabled) return
                 onChange(e.target.value)
                 resizeTextarea()
               }}
@@ -89,8 +94,14 @@ export function ChatInput({
                 if (!value?.trim()) return
                 e.currentTarget.form?.requestSubmit()
               }}
+              onFocus={() => {
+                if (typeof window === 'undefined') return
+                if (!window.matchMedia('(pointer: coarse)').matches) return
+                requestAnimationFrame(() => {
+                  formRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' })
+                })
+              }}
               disabled={hardDisabled}
-              readOnly={sendingLocked}
               aria-busy={isSending || undefined}
               className={cn(
                 'min-h-[52px] w-full resize-none overflow-x-hidden [overflow-wrap:anywhere] rounded-xl py-3 pl-4 pr-[3.75rem] text-sm leading-relaxed text-foreground antialiased',
@@ -99,7 +110,8 @@ export function ChatInput({
                 'placeholder:text-muted-foreground/90',
                 'hover:border-border hover:shadow-[inset_0_1px_3px_oklch(0_0_0/0.05)]',
                 'focus-visible:border-primary/45 focus-visible:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/18',
-                'disabled:opacity-70 read-only:cursor-wait',
+                'disabled:opacity-70',
+                isSending && !hardDisabled && 'cursor-wait',
                 'motion-safe:transition-[background-color,border-color,box-shadow] motion-safe:duration-200',
                 /* Dark: flatter, softer — unchanged intent */
                 'dark:border-transparent dark:bg-muted/40 dark:shadow-none',

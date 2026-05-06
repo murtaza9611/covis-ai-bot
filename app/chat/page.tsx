@@ -1,6 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+} from 'react'
 import { toast } from 'sonner'
 import { ChatMessage } from '@/components/chat-message'
 import { ChatInput } from '@/components/chat-input'
@@ -14,6 +21,7 @@ import { MobileNavSheet } from '@/components/mobile-nav-sheet'
 import type { SimpleChatMessage } from '@/lib/chat-mock'
 import { extractAssistantText } from '@/lib/covis-api'
 import { useSessionId } from '@/hooks/use-session-id'
+import { useVisualViewportInset } from '@/hooks/use-visual-viewport-inset'
 
 export default function ChatPage() {
   const [localInput, setLocalInput] = useState('')
@@ -24,6 +32,7 @@ export default function ChatPage() {
   const [apiHealth, setApiHealth] = useState<ChatApiHealth>('idle')
   const threadRef = useRef<HTMLDivElement>(null)
   const sessionId = useSessionId()
+  const vvKeyboardInset = useVisualViewportInset()
 
   useEffect(() => {
     try {
@@ -47,7 +56,7 @@ export default function ChatPage() {
     scrollThreadEnd()
   }, [messages.length, isLoading, scrollThreadEnd])
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const text = localInput.trim()
     if (!text || isLoading) return
@@ -132,7 +141,16 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="canvas-chat-pattern relative flex h-[100dvh] min-h-[100svh] flex-col overflow-hidden">
+    <div
+      className="canvas-chat-pattern relative flex min-h-0 flex-col overflow-hidden"
+      style={
+        {
+          '--vv-keyboard-inset': `${vvKeyboardInset}px`,
+          height: 'calc(100dvh - var(--vv-keyboard-inset, 0px))',
+          minHeight: 'calc(100svh - var(--vv-keyboard-inset, 0px))',
+        } as CSSProperties
+      }
+    >
       <a
         href="#chat-main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2.5 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-md"
