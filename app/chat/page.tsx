@@ -48,9 +48,10 @@ export default function ChatPage() {
     const end = threadEndRef.current
     if (!el || !end) return
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches
     end.scrollIntoView({
       block: 'end',
-      behavior: reduceMotion ? 'auto' : 'smooth',
+      behavior: reduceMotion || coarsePointer ? 'auto' : 'smooth',
     })
   }, [])
 
@@ -58,7 +59,15 @@ export default function ChatPage() {
     const raf = requestAnimationFrame(() => {
       scrollThreadEnd()
     })
-    return () => cancelAnimationFrame(raf)
+    // Mobile keyboards (especially iOS) resize visual viewport in phases.
+    // A follow-up snap keeps the thread pinned to the latest message.
+    const settle = window.setTimeout(() => {
+      scrollThreadEnd()
+    }, 180)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.clearTimeout(settle)
+    }
   }, [messages.length, isLoading, vvKeyboardInset, scrollThreadEnd])
 
   const handleFormSubmit = async (e: FormEvent) => {
