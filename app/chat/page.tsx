@@ -32,6 +32,8 @@ export default function ChatPage() {
   const [apiHealth, setApiHealth] = useState<ChatApiHealth>('idle')
   const threadRef = useRef<HTMLDivElement>(null)
   const threadEndRef = useRef<HTMLDivElement>(null)
+  const isNearBottomRef = useRef(true)
+  const forceStickToBottomRef = useRef(true)
   const sessionId = useSessionId()
   const vvKeyboardInset = useVisualViewportInset()
 
@@ -41,6 +43,13 @@ export default function ChatPage() {
     } catch {
       setTimezone('UTC')
     }
+  }, [])
+
+  const updateNearBottom = useCallback(() => {
+    const el = threadRef.current
+    if (!el) return
+    const remaining = el.scrollHeight - el.scrollTop - el.clientHeight
+    isNearBottomRef.current = remaining < 96
   }, [])
 
   const scrollThreadEnd = useCallback(() => {
@@ -56,24 +65,41 @@ export default function ChatPage() {
   }, [])
 
   useEffect(() => {
+    const shouldStick = forceStickToBottomRef.current || isNearBottomRef.current
+    if (!shouldStick) return
+
     const raf = requestAnimationFrame(() => {
       scrollThreadEnd()
     })
     // Mobile keyboards (especially iOS) resize visual viewport in phases.
-    // A follow-up snap keeps the thread pinned to the latest message.
-    const settle = window.setTimeout(() => {
+    // Follow-up snaps keep the thread pinned to the latest message.
+    const settleFast = window.setTimeout(() => {
       scrollThreadEnd()
-    }, 180)
+    }, 120)
+    const settleSlow = window.setTimeout(() => {
+      scrollThreadEnd()
+      if (!isLoading) {
+        forceStickToBottomRef.current = false
+      }
+    }, 320)
     return () => {
       cancelAnimationFrame(raf)
-      window.clearTimeout(settle)
+      window.clearTimeout(settleFast)
+      window.clearTimeout(settleSlow)
     }
   }, [messages.length, isLoading, vvKeyboardInset, scrollThreadEnd])
+
+  useEffect(() => {
+    const el = threadRef.current
+    if (!el) return
+    updateNearBottom()
+  }, [updateNearBottom, messages.length])
 
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const text = localInput.trim()
     if (!text || isLoading) return
+    forceStickToBottomRef.current = true
 
     const userMsg: SimpleChatMessage = {
       id: crypto.randomUUID(),
@@ -197,6 +223,7 @@ export default function ChatPage() {
                   <div
                     ref={threadRef}
                     className="chat-thread-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 md:px-8 md:py-8"
+                    onScroll={updateNearBottom}
                     aria-live="polite"
                     aria-relevant="additions"
                   >
