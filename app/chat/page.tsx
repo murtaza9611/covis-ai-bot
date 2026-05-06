@@ -31,6 +31,7 @@ export default function ChatPage() {
   const [timezone, setTimezone] = useState('UTC')
   const [apiHealth, setApiHealth] = useState<ChatApiHealth>('idle')
   const threadRef = useRef<HTMLDivElement>(null)
+  const threadEndRef = useRef<HTMLDivElement>(null)
   const sessionId = useSessionId()
   const vvKeyboardInset = useVisualViewportInset()
 
@@ -44,17 +45,21 @@ export default function ChatPage() {
 
   const scrollThreadEnd = useCallback(() => {
     const el = threadRef.current
-    if (!el) return
+    const end = threadEndRef.current
+    if (!el || !end) return
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    el.scrollTo({
-      top: el.scrollHeight,
+    end.scrollIntoView({
+      block: 'end',
       behavior: reduceMotion ? 'auto' : 'smooth',
     })
   }, [])
 
   useEffect(() => {
-    scrollThreadEnd()
-  }, [messages.length, isLoading, scrollThreadEnd])
+    const raf = requestAnimationFrame(() => {
+      scrollThreadEnd()
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [messages.length, isLoading, vvKeyboardInset, scrollThreadEnd])
 
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -197,6 +202,7 @@ export default function ChatPage() {
                           {isLoading ? <ChatTypingIndicator /> : null}
                         </>
                       )}
+                      <div ref={threadEndRef} className="h-px w-full" aria-hidden />
                     </div>
                   </div>
                   <div
