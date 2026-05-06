@@ -104,7 +104,7 @@ export function ChatInput({
               disabled={hardDisabled}
               aria-busy={isSending || undefined}
               className={cn(
-                'min-h-[52px] w-full resize-none overflow-x-hidden [overflow-wrap:anywhere] rounded-xl py-3 pl-4 pr-[3.75rem] text-sm leading-relaxed text-foreground antialiased',
+                'min-h-[52px] w-full resize-none overflow-x-hidden [overflow-wrap:anywhere] rounded-xl py-3 pl-4 pr-[3.75rem] text-base md:text-sm leading-relaxed text-foreground antialiased',
                 /* Light: crisp typing well — inset depth + readable border */
                 'border border-border/75 bg-background shadow-[inset_0_1px_3px_oklch(0_0_0/0.06)]',
                 'placeholder:text-muted-foreground/90',
