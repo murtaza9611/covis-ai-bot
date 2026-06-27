@@ -1,3 +1,5 @@
+import type { ChatAction } from '@/lib/covis-api'
+
 export type ChatRole = 'user' | 'assistant'
 
 export type SimpleChatMessage = {
@@ -6,6 +8,10 @@ export type SimpleChatMessage = {
   text: string
   /** Set when the message is an error notice from the assistant role. */
   isError?: boolean
+  /** Quick-reply CTAs returned by the assistant. */
+  actions?: ChatAction[]
+  /** Backend response kind (e.g. greeting, pending_confirmation). */
+  responseKind?: string
 }
 
 /** Static transcript — matches product reference / design mock. */

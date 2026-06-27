@@ -3,17 +3,27 @@
 import { Bot } from 'lucide-react'
 import type { SimpleChatMessage } from '@/lib/chat-mock'
 import { getUserAvatarUrl } from '@/lib/user-avatar'
+import { isClickableAction } from '@/lib/covis-api'
+import { ChatMarkdown } from '@/components/chat-markdown'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 
 interface ChatMessageProps {
   message: SimpleChatMessage
+  onActionSelect?: (payload: string) => void
+  actionsEnabled?: boolean
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({
+  message,
+  onActionSelect,
+  actionsEnabled = false,
+}: ChatMessageProps) {
   const isBot = message.role === 'assistant'
   const text = message.text
   const isError = message.isError
+  const clickableActions =
+    message.actions?.filter(isClickableAction) ?? []
 
   const motion =
     'motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300'
@@ -36,8 +46,30 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 'border-destructive/35 bg-destructive/[0.07] text-destructive motion-safe:group-hover/msg:border-destructive/40',
             )}
           >
-            <p className="whitespace-pre-wrap break-words text-inherit">{text}</p>
+            {isError ? (
+              <p className="whitespace-pre-wrap break-words text-inherit">{text}</p>
+            ) : (
+              <ChatMarkdown content={text} />
+            )}
           </div>
+          {clickableActions.length > 0 && actionsEnabled ? (
+            <div
+              className="mt-2.5 flex flex-wrap gap-2 pl-0.5"
+              role="group"
+              aria-label="Suggested replies"
+            >
+              {clickableActions.map((action) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  onClick={() => onActionSelect?.(action.payload)}
+                  className="rounded-full border border-primary/20 bg-primary/[0.08] px-4 py-2 text-sm font-medium text-foreground shadow-sm ring-1 ring-primary/10 motion-safe:transition-all motion-safe:duration-200 motion-safe:hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary/[0.14] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-primary/30 dark:bg-primary/[0.16] dark:ring-primary/20 dark:hover:bg-primary/[0.24]"
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
     )

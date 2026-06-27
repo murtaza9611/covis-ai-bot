@@ -19,7 +19,7 @@ import { TopBar } from '@/components/top-bar'
 import { Sidebar } from '@/components/sidebar'
 import { MobileNavSheet } from '@/components/mobile-nav-sheet'
 import type { SimpleChatMessage } from '@/lib/chat-mock'
-import { extractAssistantText } from '@/lib/covis-api'
+import { parseChatReply } from '@/lib/covis-api'
 import { useSessionId } from '@/hooks/use-session-id'
 import { useVisualViewportInset } from '@/hooks/use-visual-viewport-inset'
 
@@ -95,90 +95,112 @@ export default function ChatPage() {
     updateNearBottom()
   }, [updateNearBottom, messages.length])
 
-  const handleFormSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    const text = localInput.trim()
-    if (!text || isLoading) return
-    forceStickToBottomRef.current = true
+  const sendMessage = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim()
+      if (!trimmed || isLoading) return
+      forceStickToBottomRef.current = true
 
-    const userMsg: SimpleChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      text,
-    }
-    setMessages((prev) => [...prev, userMsg])
-    setLocalInput('')
-    setIsLoading(true)
+      const userMsg: SimpleChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        text: trimmed,
+      }
+      setMessages((prev) => [...prev, userMsg])
+      setIsLoading(true)
 
-    try {
-      const res = await fetch('/api/covis-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          timezone,
-          session_id: sessionId,
-        }),
-      })
+      try {
+        const res = await fetch('/api/covis-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: trimmed,
+            timezone,
+            session_id: sessionId,
+          }),
+        })
 
-      const data: unknown = await res.json().catch(() => ({}))
+        const data: unknown = await res.json().catch(() => ({}))
 
-      if (!res.ok) {
-        const errMsg =
-          typeof data === 'object' &&
-          data !== null &&
-          'error' in data &&
-          typeof (data as { error: unknown }).error === 'string'
-            ? (data as { error: string }).error
-            : `Request failed (${res.status})`
-        toast.error(errMsg)
+        if (!res.ok) {
+          const errMsg =
+            typeof data === 'object' &&
+            data !== null &&
+            'error' in data &&
+            typeof (data as { error: unknown }).error === 'string'
+              ? (data as { error: string }).error
+              : `Request failed (${res.status})`
+          toast.error(errMsg)
+          setApiHealth('error')
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              text: errMsg,
+              isError: true,
+            },
+          ])
+          return
+        }
+
+        const parsed = parseChatReply(data)
+        const assistantText =
+          parsed?.reply.trim() ??
+          (typeof data === 'object' && data !== null
+            ? JSON.stringify(data)
+            : 'Received a response we could not display.')
+
+        setApiHealth('ok')
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            text: assistantText,
+            actions: parsed?.actions,
+            responseKind: parsed?.responseKind,
+            isError: !parsed?.reply.trim(),
+          },
+        ])
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Network error'
+        toast.error(msg)
         setApiHealth('error')
         setMessages((prev) => [
           ...prev,
           {
             id: crypto.randomUUID(),
             role: 'assistant',
-            text: errMsg,
+            text: msg,
             isError: true,
           },
         ])
-        return
+      } finally {
+        setIsLoading(false)
       }
+    },
+    [isLoading, sessionId, timezone],
+  )
 
-      const reply = extractAssistantText(data)
-      const assistantText =
-        reply?.trim() ??
-        (typeof data === 'object' && data !== null
-          ? JSON.stringify(data)
-          : 'Received a response we could not display.')
-
-      setApiHealth('ok')
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: assistantText,
-          isError: !reply?.trim(),
-        },
-      ])
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Network error'
-      toast.error(msg)
-      setApiHealth('error')
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: msg,
-          isError: true,
-        },
-      ])
-    } finally {
-      setIsLoading(false)
-    }
+  const handleFormSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    const text = localInput.trim()
+    if (!text || isLoading) return
+    setLocalInput('')
+    await sendMessage(text)
   }
+
+  const handleActionSelect = useCallback(
+    (payload: string) => {
+      void sendMessage(payload)
+    },
+    [sendMessage],
+  )
+
+  const latestAssistantId = [...messages]
+    .reverse()
+    .find((m) => m.role === 'assistant')?.id
 
   return (
     <div
@@ -233,7 +255,16 @@ export default function ChatPage() {
                       ) : (
                         <>
                           {messages.map((message) => (
-                            <ChatMessage key={message.id} message={message} />
+                            <ChatMessage
+                              key={message.id}
+                              message={message}
+                              onActionSelect={handleActionSelect}
+                              actionsEnabled={
+                                !isLoading &&
+                                message.role === 'assistant' &&
+                                message.id === latestAssistantId
+                              }
+                            />
                           ))}
                           {isLoading ? <ChatTypingIndicator /> : null}
                         </>

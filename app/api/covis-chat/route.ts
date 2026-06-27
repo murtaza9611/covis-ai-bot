@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
-const COVIS_CHAT_URL = 'https://ai-bot.covis.ai/api/v1/chat'
+// const COVIS_CHAT_URL = 'https://ai-bot.covis.ai/api/v1/chat'
+const COVIS_CHAT_URL = 'http://0.0.0.0:8569/api/v1/chat'
 
 export const maxDuration = 60
 
