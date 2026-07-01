@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Deploy FastAPI Backend') {
+            steps {
+                echo 'Deploying FastAPI backend with uv and .venv'
+
+                // Sync code to server
+                sh '''
+                sudo rsync -avz --delete \
+                  -e "ssh -p 2002" \
+                  --exclude ".git" \
+                  --exclude ".env" \
+                  --exclude "Jenkinsfile" \
+                  /var/lib/jenkins/workspace/ai-bot.covis.ai/ \
+                  ubuntu@13.200.234.112:/home/ubuntu/app/ai-bot.covis.ai/
+                '''
+
+                // SSH into server and handle venv + dependencies + restart
+sh '''
+sudo ssh -p 2002 -o StrictHostKeyChecking=no ubuntu@13.200.234.112 << 'EOF'
+set -e
+
+
+cd /home/ubuntu/app/ai-bot.covis.ai
+
+# Create venv if not exists
+if [ ! -d ".venv" ]; then
+    uv venv .venv
+fi
+
+# Activate
+source .venv/bin/activate
+
+# Install deps
+uv sync
+
+# Ensure gunicorn
+uv add gunicorn
+
+# Restart app
+pm2 restart ai-bot.covis
+
+EOF
+'''
+
+            }
+        }
+    }
+
+    post {
+        success {
+            emailext(
+                body: 'FastAPI Backend successfully deployed. Please verify API is working.',
+                subject: '$PROJECT_NAME - Build #$BUILD_NUMBER - SUCCESS!',
+                to: 'ghani.waheed@xevensolutions.com , hassan.mahmood@xevensolutions.com , murtaza.ahmed@xevensolutions.com'
+            )
+        }
+        failure {
+            emailext(
+                attachLog: true,
+                body: 'FastAPI Backend deployment failed. Please check Jenkins logs.',
+                subject: '$PROJECT_NAME - Build #$BUILD_NUMBER - FAILED!',
+                to: 'ghani.waheed@xevensolutions.com , hassan.mahmood@xevensolutions.com , murtaza.ahmed@xevensolutions.com'
+            )
+        }
+    }
+}
+
+
+
+

@@ -1,0 +1,11 @@
+# Keeps the chat shell light and on-brand even when the OS prefers dark mode.
+[theme]
+base = "light"
+primaryColor = "#0284c7"
+backgroundColor = "#f1f5f9"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#0f172a"
+font = "sans-serif"
+
+[client]
+toolbarMode = "minimal"

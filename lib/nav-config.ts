@@ -6,6 +6,7 @@ import {
   Settings,
   Palette,
   Bot,
+  FlaskConical,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -13,6 +14,7 @@ export type PrimaryNavItem = {
   id: string
   label: string
   icon: LucideIcon
+  href?: string
 }
 
 /** Active primary rail item on the bug chatbot route. */
@@ -24,6 +26,7 @@ export const PRIMARY_NAV: PrimaryNavItem[] = [
   { id: 'appointments', label: 'Appointments', icon: Calendar },
   { id: 'rooms', label: 'Rooms', icon: Building2 },
   { id: 'customization', label: 'Customization', icon: Palette },
-  { id: 'bug-chatbot', label: 'Bug report', icon: Bot },
+  { id: 'bug-chatbot', label: 'Bug report', icon: Bot, href: '/chat' },
+  { id: 'qa-agent', label: 'QA Agent', icon: FlaskConical, href: '/qa' },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]

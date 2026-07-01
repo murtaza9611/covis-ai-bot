@@ -1,11 +1,15 @@
 'use client'
 
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import * as TooltipPrimitive from '@radix-ui/react-tooltip'
-import { ACTIVE_PRIMARY_NAV_ID, PRIMARY_NAV } from '@/lib/nav-config'
+import { PRIMARY_NAV } from '@/lib/nav-config'
 import { TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 export function Sidebar({ className }: { className?: string }) {
+  const pathname = usePathname()
+
   return (
     <aside
       className={cn(
@@ -20,31 +24,48 @@ export function Sidebar({ className }: { className?: string }) {
         >
           {PRIMARY_NAV.map((item) => {
             const Icon = item.icon
-            const active = item.id === ACTIVE_PRIMARY_NAV_ID
+            const active = item.href ? pathname === item.href : false
+            const inner = (
+              <>
+                <Icon
+                  className={cn(
+                    'h-[1.35rem] w-[1.35rem] shrink-0',
+                    active
+                      ? 'text-primary'
+                      : 'text-sidebar-foreground group-hover:text-primary dark:group-hover:text-foreground',
+                  )}
+                  aria-hidden
+                />
+              </>
+            )
+            const className = cn(
+              'group flex size-10 shrink-0 items-center justify-center rounded-2xl motion-safe:transition-all motion-safe:duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar',
+              active
+                ? 'bg-secondary text-primary shadow-sm motion-safe:hover:bg-secondary'
+                : 'text-sidebar-foreground hover:bg-primary/12 hover:text-primary motion-safe:hover:scale-[1.04] motion-safe:active:scale-[0.98] dark:hover:bg-muted/60 dark:hover:text-foreground',
+            )
+
             return (
               <TooltipPrimitive.Root key={item.id}>
                 <TooltipPrimitive.Trigger asChild>
-                  <button
-                    type="button"
-                    aria-current={active ? 'page' : undefined}
-                    aria-label={item.label}
-                    className={cn(
-                      'group flex size-10 shrink-0 items-center justify-center rounded-2xl motion-safe:transition-all motion-safe:duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar',
-                      active
-                        ? 'bg-secondary text-primary shadow-sm motion-safe:hover:bg-secondary'
-                        : 'text-sidebar-foreground hover:bg-primary/12 hover:text-primary motion-safe:hover:scale-[1.04] motion-safe:active:scale-[0.98] dark:hover:bg-muted/60 dark:hover:text-foreground',
-                    )}
-                  >
-                    <Icon
-                      className={cn(
-                        'h-[1.35rem] w-[1.35rem] shrink-0',
-                        active
-                          ? 'text-primary'
-                          : 'text-sidebar-foreground group-hover:text-primary dark:group-hover:text-foreground',
-                      )}
-                      aria-hidden
-                    />
-                  </button>
+                  {item.href ? (
+                    <Link
+                      href={item.href}
+                      aria-current={active ? 'page' : undefined}
+                      aria-label={item.label}
+                      className={className}
+                    >
+                      {inner}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label={item.label}
+                      className={className}
+                    >
+                      {inner}
+                    </button>
+                  )}
                 </TooltipPrimitive.Trigger>
                 <TooltipContent side="right" sideOffset={10} className="font-medium">
                   {item.label}

@@ -198,6 +198,11 @@ export default function ChatPage() {
     [sendMessage],
   )
 
+  const handleActionPrefill = useCallback((payload: string) => {
+    setLocalInput(payload)
+    forceStickToBottomRef.current = true
+  }, [])
+
   const latestAssistantId = [...messages]
     .reverse()
     .find((m) => m.role === 'assistant')?.id
@@ -259,6 +264,7 @@ export default function ChatPage() {
                               key={message.id}
                               message={message}
                               onActionSelect={handleActionSelect}
+                              onActionPrefill={handleActionPrefill}
                               actionsEnabled={
                                 !isLoading &&
                                 message.role === 'assistant' &&

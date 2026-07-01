@@ -3,7 +3,7 @@
 import { Bot } from 'lucide-react'
 import type { SimpleChatMessage } from '@/lib/chat-mock'
 import { getUserAvatarUrl } from '@/lib/user-avatar'
-import { isClickableAction } from '@/lib/covis-api'
+import { partitionActions } from '@/lib/covis-api'
 import { ChatMarkdown } from '@/components/chat-markdown'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
@@ -11,22 +11,27 @@ import { cn } from '@/lib/utils'
 interface ChatMessageProps {
   message: SimpleChatMessage
   onActionSelect?: (payload: string) => void
+  onActionPrefill?: (payload: string) => void
   actionsEnabled?: boolean
 }
 
 export function ChatMessage({
   message,
   onActionSelect,
+  onActionPrefill,
   actionsEnabled = false,
 }: ChatMessageProps) {
   const isBot = message.role === 'assistant'
   const text = message.text
   const isError = message.isError
-  const clickableActions =
-    message.actions?.filter(isClickableAction) ?? []
+  const { quickReplies, prefills } = partitionActions(message.actions)
+  const hasActions = quickReplies.length > 0 || prefills.length > 0
 
   const motion =
     'motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300'
+
+  const chipClass =
+    'rounded-full border px-4 py-2 text-sm font-medium shadow-sm motion-safe:transition-all motion-safe:duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
   if (isBot) {
     return (
@@ -52,22 +57,41 @@ export function ChatMessage({
               <ChatMarkdown content={text} />
             )}
           </div>
-          {clickableActions.length > 0 && actionsEnabled ? (
-            <div
-              className="mt-2.5 flex flex-wrap gap-2 pl-0.5"
-              role="group"
-              aria-label="Suggested replies"
-            >
-              {clickableActions.map((action) => (
-                <button
-                  key={action.id}
-                  type="button"
-                  onClick={() => onActionSelect?.(action.payload)}
-                  className="rounded-full border border-primary/20 bg-primary/[0.08] px-4 py-2 text-sm font-medium text-foreground shadow-sm ring-1 ring-primary/10 motion-safe:transition-all motion-safe:duration-200 motion-safe:hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary/[0.14] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-primary/30 dark:bg-primary/[0.16] dark:ring-primary/20 dark:hover:bg-primary/[0.24]"
-                >
-                  {action.label}
-                </button>
-              ))}
+          {hasActions && actionsEnabled ? (
+            <div className="mt-2.5 pl-0.5">
+              <div
+                className="flex flex-wrap gap-2"
+                role="group"
+                aria-label="Suggested replies"
+              >
+                {quickReplies.map((action, index) => (
+                  <button
+                    key={`${action.id}-${index}`}
+                    type="button"
+                    onClick={() => onActionSelect?.(action.payload)}
+                    className={cn(
+                      chipClass,
+                      'border-primary/20 bg-primary/[0.08] text-foreground ring-1 ring-primary/10 motion-safe:hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary/[0.14] hover:shadow-md dark:border-primary/30 dark:bg-primary/[0.16] dark:ring-primary/20 dark:hover:bg-primary/[0.24]',
+                    )}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+                {prefills.map((action, index) => (
+                  <button
+                    key={`${action.id}-${index}`}
+                    type="button"
+                    onClick={() => onActionPrefill?.(action.payload)}
+                    className={cn(
+                      chipClass,
+                      'border-border/80 bg-muted/40 text-foreground ring-1 ring-border/60 motion-safe:hover:-translate-y-0.5 hover:border-primary/25 hover:bg-muted/70 hover:shadow-md',
+                    )}
+                    title="Fill the message box — edit before sending"
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
             </div>
           ) : null}
         </div>

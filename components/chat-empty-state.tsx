@@ -4,8 +4,8 @@ import { Sparkles } from 'lucide-react'
 
 const suggestions = [
   'Report a bug',
-  'Create a Covis task',
-  'Check task status',
+  'Check project status',
+  "What's due this week?",
 ]
 
 type ChatEmptyStateProps = {

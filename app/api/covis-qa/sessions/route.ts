@@ -1,40 +1,34 @@
 import { NextResponse } from 'next/server'
 
-// const COVIS_CHAT_URL = 'https://ai-bot.covis.ai/api/v1/chat'
-const COVIS_CHAT_URL = 'http://0.0.0.0:8569/api/v1/chat'
+const COVIS_QA_URL = 'http://0.0.0.0:8569/api/v1/qa/sessions'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 export async function POST(req: Request) {
-  let body: { message?: string; timezone?: string; session_id?: string }
+  let body: { mode?: string; drive_mode?: string; max_turns?: number; timezone?: string }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const message = typeof body.message === 'string' ? body.message : ''
+  const mode = body.mode === 'NEGATIVE' ? 'NEGATIVE' : 'POSITIVE'
+  const drive_mode = body.drive_mode === 'MANUAL' ? 'MANUAL' : 'AUTO'
+  const max_turns =
+    typeof body.max_turns === 'number' && body.max_turns >= 1 && body.max_turns <= 30
+      ? body.max_turns
+      : 10
   const timezone =
-    typeof body.timezone === 'string' && body.timezone
-      ? body.timezone
-      : 'UTC'
-  const session_id =
-    typeof body.session_id === 'string' && body.session_id
-      ? body.session_id
-      : '1'
-
-  if (!message.trim()) {
-    return NextResponse.json({ error: 'message is required' }, { status: 400 })
-  }
+    typeof body.timezone === 'string' && body.timezone ? body.timezone : 'UTC'
 
   try {
-    const upstream = await fetch(COVIS_CHAT_URL, {
+    const upstream = await fetch(COVIS_QA_URL, {
       method: 'POST',
       headers: {
         accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message, timezone, session_id }),
+      body: JSON.stringify({ mode, drive_mode, max_turns, timezone }),
       signal: req.signal,
     })
 
@@ -50,8 +44,8 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            typeof json === 'object' && json !== null && 'error' in json
-              ? String((json as { error: unknown }).error)
+            typeof json === 'object' && json !== null && 'message' in json
+              ? String((json as { message: unknown }).message)
               : text || upstream.statusText,
         },
         { status: upstream.status },

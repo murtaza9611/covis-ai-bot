@@ -1,8 +1,11 @@
-/** Covis chat API action (quick reply / hint). */
+/** Covis chat CTA action types. */
+export type ChatActionType = 'quick_reply' | 'prefill'
+
+/** Covis chat API action (quick reply or prefill). */
 export type ChatAction = {
   id: string
   label: string
-  type: string
+  type: ChatActionType
   payload: string
 }
 
@@ -14,20 +17,59 @@ export type ChatReplyData = {
   tasks: Record<string, unknown>[]
 }
 
+function normalizeActionType(raw: unknown): ChatActionType | null {
+  if (raw === 'prefill') return 'prefill'
+  if (raw === 'hint' || raw === 'free_text_hint') return null
+  return 'quick_reply'
+}
+
 function parseAction(item: unknown): ChatAction | null {
   if (!item || typeof item !== 'object') return null
   const o = item as Record<string, unknown>
   if (typeof o.id !== 'string' || typeof o.label !== 'string') return null
+  const type = normalizeActionType(o.type)
+  if (!type) return null
   return {
     id: o.id,
     label: o.label,
-    type: typeof o.type === 'string' ? o.type : 'quick_reply',
+    type,
     payload: typeof o.payload === 'string' ? o.payload : '',
   }
 }
 
+/** Sends payload immediately when tapped. */
+export function isQuickReplyAction(action: ChatAction): boolean {
+  return action.type === 'quick_reply' && action.payload.trim().length > 0
+}
+
+/** Fills the chat input for the user to edit before sending. */
+export function isPrefillAction(action: ChatAction): boolean {
+  return action.type === 'prefill' && action.payload.trim().length > 0
+}
+
+/** @deprecated Use isQuickReplyAction */
 export function isClickableAction(action: ChatAction): boolean {
-  return action.type !== 'free_text_hint' && action.payload.trim().length > 0
+  return isQuickReplyAction(action)
+}
+
+export function partitionActions(actions: ChatAction[] | undefined) {
+  const list = actions ?? []
+  return {
+    quickReplies: list.filter(isQuickReplyAction),
+    prefills: list.filter(isPrefillAction),
+  }
+}
+
+function dedupeActions(actions: ChatAction[]): ChatAction[] {
+  const seen = new Set<string>()
+  const result: ChatAction[] = []
+  for (const action of actions) {
+    const key = `${action.type}:${action.payload.toLowerCase()}:${action.id}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(action)
+  }
+  return result
 }
 
 /** Parse Covis chat API envelope into structured reply data. */
@@ -44,11 +86,17 @@ export function parseChatReply(payload: unknown): ChatReplyData | null {
   if (typeof o.data === 'object' && o.data !== null) {
     const d = o.data as Record<string, unknown>
     const reply = typeof d.reply === 'string' ? d.reply : ''
-    const actions = Array.isArray(d.actions)
-      ? d.actions.map(parseAction).filter((a): a is ChatAction => a !== null)
-      : []
+    const actions = dedupeActions(
+      Array.isArray(d.actions)
+        ? d.actions.map(parseAction).filter((a): a is ChatAction => a !== null)
+        : [],
+    )
     const responseKind =
       typeof d.response_kind === 'string' ? d.response_kind : 'text'
+    const filteredActions =
+      responseKind === 'clarify'
+        ? actions.filter((a) => a.type !== 'prefill')
+        : actions
     const tasks = Array.isArray(d.tasks)
       ? d.tasks.filter(
           (t): t is Record<string, unknown> =>
@@ -56,8 +104,8 @@ export function parseChatReply(payload: unknown): ChatReplyData | null {
         )
       : []
 
-    if (reply.trim() || actions.length > 0) {
-      return { reply, actions, responseKind, tasks }
+    if (reply.trim() || filteredActions.length > 0) {
+      return { reply, actions: filteredActions, responseKind, tasks }
     }
 
     const inner =
@@ -65,7 +113,7 @@ export function parseChatReply(payload: unknown): ChatReplyData | null {
     if (typeof inner === 'string' && inner.trim()) {
       return {
         reply: inner,
-        actions,
+        actions: filteredActions,
         responseKind,
         tasks,
       }
